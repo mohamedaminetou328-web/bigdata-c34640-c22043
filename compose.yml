@@ -1,0 +1,60 @@
+version: '3.8'
+
+networks:
+  my_hadoop_network:
+    driver: bridge
+
+services:
+  namenode:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: my-namenode
+    hostname: my-namenode
+    restart: always
+    ports:
+      - "9870:9870"
+      - "8020:8020"
+    networks:
+      - my_hadoop_network
+    environment:
+      - CLUSTER_NAME=MyCluster
+
+  datanode:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: my-datanode
+    hostname: my-datanode
+    restart: always
+    depends_on:
+      - namenode
+    networks:
+      - my_hadoop_network
+    environment:
+      - CORE_CONF_fs_defaultFS=hdfs://my-namenode:8020
+
+  spark-master:
+    image: bde2020/spark-master:3.0.0-hadoop3.2
+    container_name: my-spark-master
+    hostname: my-spark-master
+    restart: always
+    ports:
+      - "8080:8080"
+      - "7077:7077"
+    networks:
+      - my_hadoop_network
+    environment:
+      - INIT_DAEMON_STEP=false
+      - CORE_CONF_fs_defaultFS=hdfs://my-namenode:8020
+
+  spark-worker:
+    image: bde2020/spark-worker:3.0.0-hadoop3.2
+    container_name: my-spark-worker
+    hostname: my-spark-worker
+    restart: always
+    depends_on:
+      - spark-master
+    ports:
+      - "8081:8081"
+    networks:
+      - my_hadoop_network
+    environment:
+      - SPARK_MASTER=spark://my-spark-master:7077
+      - CORE_CONF_fs_defaultFS=hdfs://my-namenode:8020
